@@ -1,0 +1,6 @@
+config.py
+*.ics
+__pycache__
+pipfile.lock
+env/
+*.pyc
