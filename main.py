@@ -1,13 +1,11 @@
-import time
-import threading
 from openrgb import OpenRGBClient
-from openrgb.utils import RGBColor
 import requests
 import os
 import config  # Importing the configuration file
 import logging
 import json
 from icalendar import Calendar
+import datetime
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -24,12 +22,19 @@ def scrape_bin_data():
 
     # Find events relevant to bin collection
     bin_events = []
+    current_time = datetime.datetime.utcnow()  # Use UTC time, which is timezone unaware
     for event in cal.walk('vevent'):
         if 'Recycling' in event.get('summary') or 'Rubbish' in event.get('summary'):
             bin_events.append(event)
 
-    # Sort events by date
-    bin_events.sort(key=lambda x: x.get('dtstart').dt)
+    # Convert current_time to timezone-naive datetime
+    current_time = current_time.replace(tzinfo=None)
+
+    # Filter out events that have already passed
+    bin_events = [event for event in bin_events if event.decoded('dtstart').replace(tzinfo=None) >= current_time]
+
+    # Sort remaining events by date
+    bin_events.sort(key=lambda x: x.decoded('dtstart'))
 
     # Get the next bin collection event
     next_bin_event = bin_events[0] if bin_events else None
@@ -37,19 +42,20 @@ def scrape_bin_data():
     # Extract relevant information
     if next_bin_event:
         # Construct a list of summaries for events on the same day
-        bin_summaries = [event.get('summary') for event in bin_events if event.get('dtstart').dt.date() == next_bin_event.get('dtstart').dt.date()]
+        bin_summaries = [event.get('summary') for event in bin_events if event.decoded('dtstart').date() == next_bin_event.decoded('dtstart').date()]
         combined_summary = ", ".join(bin_summaries)
         logging.info(f"Next bin collection event: {combined_summary}")
 
         bin_data = {
             'summary': combined_summary,
-            'start_time': next_bin_event.get('dtstart').dt,
-            'end_time': next_bin_event.get('dtend').dt if 'dtend' in next_bin_event else None
+            'start_time': next_bin_event.decoded('dtstart'),
+            'end_time': next_bin_event.decoded('dtend') if 'dtend' in next_bin_event else None
         }
 
         return bin_data
     else:
         return None
+
 
 def control_pc_lights(bin_data):
     # Initialize OpenRGBClient with specified options

@@ -24,4 +24,4 @@ The script needs to be setup by modifying the `config.py` file. Here are the con
 - `BARK_API_KEY`: Device key for the Bark push notification service. (Optional)
 
 >[!NOTE]
-> OpenRBG profiles created with external plugins do not work. This is to do with the OpenRBG-Python library and I haven't worked out a way to get around this.
+> OpenRBG profiles created with external plugins do not work. If you have a plugin profile that is on using an external plugin (e.g Effects plugin) the script will not override the plugin profile, meaning the bins profile is set and loaded but not shown until the plugin profile is unloaded. This is to do with the OpenRBG-Python library and I haven't worked out a way to get around this.
